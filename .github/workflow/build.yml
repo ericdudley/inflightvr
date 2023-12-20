@@ -1,0 +1,29 @@
+name: Build Website
+on:
+  push:
+    branches-ignore:
+      - gh-pages
+jobs:
+  build:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.4.0
+      - name: Install deps
+        run: npm ci
+      - name: Build for production
+        run: npm run build
+      # - name: Create CNAME file
+      #   run: echo "docs.cashcompass.co" > ./build/CNAME
+      - name: Deploy
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build
