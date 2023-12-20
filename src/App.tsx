@@ -1,8 +1,12 @@
 import { Fragment, useEffect, useState } from "react";
 import { Camera, Entity, Globe, Scene, Viewer, useCesium } from "resium";
 import "./App.css";
-import rawData from "./data1.json";
+import rawData from "./data.json";
 let data = rawData as Data;
+import { Ion } from "cesium";
+
+Ion.defaultAccessToken =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI5NTI0N2QxZi02OGM2LTQ4NmQtOThiZC1lMGRlNzdmNGExMTkiLCJpZCI6MTg1Mzk4LCJpYXQiOjE3MDMwMzAzNDl9.zrryI43JaiIomLJAFrFurownKzveN-JxWL1ChoEtyOk";
 
 // Filter out duplicate points
 data = data.filter(
@@ -44,7 +48,7 @@ function smoothData(data: Data, k: number) {
 }
 
 // Usage
-data = smoothData(data, 30);
+data = smoothData(data, 15);
 
 const DURATION_MS = 16;
 const ROUTE_SIZE = 10;
@@ -113,6 +117,7 @@ function App() {
   const [rawIdx, setRawIdx] = useState(0);
   const idx = Math.floor(rawIdx / INTERPOLATION_RATIO);
   const { viewer } = useCesium();
+  const [lookdown, setLookdown] = useState(0);
 
   useEffect(() => {
     let interval: any;
@@ -123,7 +128,7 @@ function App() {
         );
         console.count("test");
       }, DURATION_MS);
-    }, 2000);
+    }, 500);
 
     return () => {
       clearInterval(interval);
@@ -138,7 +143,7 @@ function App() {
   );
 
   let nextCameraPosition =
-    idx < positions.length - 1
+    idx > 0 && idx < positions.length - 1
       ? Cartesian3.fromDegrees(
           data[(idx + 1) % positions.length].longitude,
           data[(idx + 1) % positions.length].latitude,
@@ -147,7 +152,7 @@ function App() {
       : null;
 
   let nextCameraLookAtPosition =
-    idx < positions.length - 1
+    idx > 0 && idx < positions.length - 1
       ? Cartesian3.fromDegrees(
           data[(idx + 1) % positions.length].longitude,
           data[(idx + 1) % positions.length].latitude,
@@ -156,7 +161,12 @@ function App() {
               data[(idx + 1) % positions.length].longitude,
               data[(idx + 1) % positions.length].latitude
             )
-          ) ?? Math.max(0, data[(idx + 1) % positions.length].altitude - 250)
+          ) ??
+            Math.max(
+              0,
+              data[idx % positions.length].altitude -
+                ((lookdown + 40) / 100) * 1000
+            )
         )
       : null;
 
@@ -178,10 +188,6 @@ function App() {
     );
   }
 
-  const [_camera, setCamera] = useState<
-    "down" | "forward" | "backward" | "angle"
-  >("down");
-
   return (
     <div>
       <div
@@ -193,39 +199,20 @@ function App() {
           right: 0,
         }}
       >
-        <div className="flex items-center gap-2">
-          <p>
-            {idx} / {positions.length}
-          </p>
-          <p>{data[(idx + 1) % positions.length].altitude - 250}</p>
-          <button
-            onClick={() => {
-              setCamera("down");
-            }}
-          >
-            Down
-          </button>
-          <button
-            onClick={() => {
-              setCamera("forward");
-            }}
-          >
-            Forward
-          </button>
-          <button
-            onClick={() => {
-              setCamera("backward");
-            }}
-          >
-            Backward
-          </button>
-          <button
-            onClick={() => {
-              setCamera("angle");
-            }}
-          >
-            Angle
-          </button>
+        <div className="flex items-center gap-8 h-16 px-4">
+          <h1 className="text-2xl font-bold mr-2">Inflight VR</h1>
+          <p>{Math.floor(data[(idx + 1) % positions.length].altitude)}ft</p>
+          <div className="flex flex-col gap-2 items-start">
+            <label htmlFor="lookdown">Lookdown</label>
+            <input
+              id="lookdown"
+              type="range"
+              min="0"
+              max="100"
+              value={lookdown}
+              onChange={(e) => setLookdown(parseInt(e.target.value))}
+            />
+          </div>
         </div>
 
         <div style={{ height: "90%" }}>
